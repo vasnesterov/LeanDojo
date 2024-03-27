@@ -142,6 +142,23 @@ def camel_case(s: str) -> str:
     """Convert the string ``s`` to camel case."""
     return _CAMEL_CASE_REGEX.sub(" ", s).title().replace(" ", "")
 
+def remove_multiline_comments(source_code: str) -> str:
+    """Remove the doc comment at the end. Used to remove such comments before the theorem being proved"""
+    cleaned_code = []
+    prev = None
+    depth = 0
+    for c in source_code:
+        if depth == 0:
+            cleaned_code.append(c)
+        if c == '-' and prev == '/':
+            depth += 1
+            if depth == 1:
+                cleaned_code.pop()
+                cleaned_code.pop()
+        elif c == '/' and prev == '-':
+            depth -= 1
+        prev = c
+    return ''.join(cleaned_code)
 
 @cache
 def get_repo_info(path: Path) -> Tuple[str, str]:

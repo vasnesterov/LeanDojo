@@ -18,7 +18,7 @@ from ..constants import (
     TACTIC_CPU_LIMIT,
     TACTIC_MEMORY_LIMIT,
 )
-from ..utils import to_json_path
+from ..utils import to_json_path, remove_multiline_comments
 from .parse_goals import parse_goals, Goal
 from ..data_extraction.traced_data import TracedFile
 from ..data_extraction.trace import get_traced_repo_path
@@ -413,7 +413,7 @@ class Dojo:
         code_thereom = lean_file[traced_theorem.start : proof_start]
         modified_code = (
             code_import
-            + code_before_theorem
+            + remove_multiline_comments(code_before_theorem)
             + "set_option maxHeartbeats 0 in\n"
             + code_thereom
             + code_proof
