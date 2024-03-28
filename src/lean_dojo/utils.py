@@ -155,7 +155,7 @@ def remove_multiline_comments(source_code: str) -> str:
             if depth == 1:
                 cleaned_code.pop()
                 cleaned_code.pop()
-        elif c == '/' and prev == '-':
+        elif c == '/' and prev == '-' and depth > 0:
             depth -= 1
         prev = c
     return ''.join(cleaned_code)
