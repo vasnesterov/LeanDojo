@@ -23,7 +23,8 @@ from .parse_goals import parse_goals, Goal
 from ..data_extraction.traced_data import TracedFile
 from ..data_extraction.trace import get_traced_repo_path
 from ..data_extraction.lean import Theorem, LeanGitRepo, Pos
-from ..container import get_container, Mount, NativeContainer, DockerContainer
+
+from ..container import get_container, Mount, NativeContainer, DockerContainer, LightNativeContainer
 
 
 _REPL_PROMPT = "REPL>"
@@ -201,7 +202,8 @@ class Dojo:
             self._modify_file(traced_file)
 
             # Run the modified file in a container.
-            self.container = get_container()
+            self.container = get_container(light=True)
+            
             logger.debug(f"Launching the proof using {type(self.container)}")
             mts = [Mount(Path.cwd(), Path(f"/workspace/{self.repo.name}"))]
             self.container.run(
@@ -309,6 +311,8 @@ class Dojo:
         logger.debug("Cleaning up the container.")
         assert isinstance(self.container, DockerContainer) or isinstance(
             self.container, NativeContainer
+        ) or isinstance(
+            self.container, LightNativeContainer
         )
         self.container.cleanup()
 

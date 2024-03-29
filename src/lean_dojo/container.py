@@ -237,6 +237,86 @@ class NativeContainer(Container):
         self._unmount_files(self.mounts)
 
 
+class LightNativeContainer(Container):
+    """A container that runs commands natively."""
+    
+    def _build_native_command(self, command: str, envs: Dict[str, str]) -> str:
+        if len(envs) == 0:
+            return command
+        else:
+            return " ".join(f"{k}={v}" for k, v in envs.items()) + " " + command
+
+    def _resolve_dir(self, p: Path, mounts: List[Mount]) -> Path:
+        p = Path(p)
+        for mount in mounts:
+            if p.is_relative_to(mount.dst):
+                p = mount.src / p.relative_to(mount.dst)
+                return p
+        raise ValueError("Work directory does not correspond to any mount destination")
+    
+    def run(
+        self,
+        command: str,
+        mounts: List[Mount] = [],
+        envs: Dict[str, str] = {},
+        as_current_user: bool = True,
+        capture_output: bool = False,
+        cpu_limit: Optional[int] = None,
+        memory_limit: Optional[str] = None,
+        work_dir: Union[Path, str, None] = None,
+    ) -> None:
+        assert as_current_user, "NativeContainer can only run as the current user."
+        assert memory_limit is None, "NativeContainer does not support memory limit."
+        assert cpu_limit is None, "NativeContainer does not support CPU limit."
+
+        cmd = self._build_native_command(command, envs)
+        logger.debug(cmd)
+
+        if work_dir is None:
+            work_dir = Path.cwd()
+        else:
+            work_dir = self._resolve_dir(work_dir, mounts)
+
+        with working_directory(work_dir):
+            execute(cmd, capture_output=capture_output)
+
+    def run_interactive(
+        self,
+        command: str,
+        mounts: List[Mount] = [],
+        envs: Dict[str, str] = {},
+        as_current_user: bool = True,
+        cpu_limit: Optional[int] = None,
+        memory_limit: Optional[str] = None,
+        work_dir: Optional[str] = None,
+    ) -> subprocess.Popen:
+        assert as_current_user, "NativeContainer can only run as the current user."
+
+        cmd = self._build_native_command(command, envs)
+        logger.debug(cmd)
+
+        if work_dir is None:
+            work_dir = Path.cwd()
+        else:
+            work_dir = self._resolve_dir(work_dir, mounts)
+
+        with working_directory(work_dir):
+            proc = subprocess.Popen(
+                shlex.split(cmd),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                encoding="utf-8",
+                bufsize=1,
+            )
+
+        return proc
+
+    def cleanup(self) -> None:
+        pass
+
+
 class DockerContainer(Container):
     """A container that runs commands in a Docker container."""
 
@@ -352,11 +432,13 @@ class DockerContainer(Container):
         os.system(f"docker stop -t 1 {cid} 1>/dev/null 2>/dev/null")
 
 
-def get_container() -> Container:
+def get_container(light=False) -> Container:
     if CONTAINER == "docker":
         return DockerContainer(DOCKER_TAG)
     else:
         assert (
             CONTAINER == "native"
         ), "Currently only `docker` and `native` are supported."
+        if light:
+            return LightNativeContainer()
         return NativeContainer()
