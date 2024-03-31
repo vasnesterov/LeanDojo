@@ -522,7 +522,7 @@ class Dojo:
             str: _description_
         """
         if self.proc.stdout is None:
-            raise RuntimeError("self.proc.stout is not initialized")
+            raise RuntimeError("self.proc.stdout is not initialized")
         msg: List[str] = []
         while True:
             line = self.proc.stdout.readline().strip()
