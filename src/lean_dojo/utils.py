@@ -10,6 +10,7 @@ import typing
 import hashlib
 import tempfile
 import subprocess
+import psutil
 from pathlib import Path
 from loguru import logger
 from functools import cache
@@ -119,6 +120,22 @@ def execute(
     output = res.stdout.decode()
     error = res.stderr.decode()
     return output, error
+
+def kill_proc_with_children(pid, timeout=2):
+    parent = psutil.Process(pid)
+    procs = parent.children(recursive=True)
+    procs.append(parent)
+    for process in procs:
+        try:
+            process.terminate()
+        except psutil.NoSuchProcess:
+            pass
+    gone, alive = psutil.wait_procs(procs, timeout=timeout)
+    for process in alive:
+        try:
+            process.kill()
+        except psutil.NoSuchProcess:
+            pass
 
 
 def compute_md5(path: Path) -> str:
