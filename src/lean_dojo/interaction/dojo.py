@@ -18,7 +18,7 @@ from ..constants import (
     TACTIC_CPU_LIMIT,
     TACTIC_MEMORY_LIMIT,
 )
-from ..utils import to_json_path, remove_multiline_comments
+from ..utils import to_json_path, remove_multiline_comments, kill_proc_with_children
 from .parse_goals import parse_goals, Goal
 from ..data_extraction.traced_data import TracedFile
 from ..data_extraction.trace import get_traced_repo_path
@@ -318,11 +318,12 @@ class Dojo:
 
     def _cleanup_proc(self) -> None:
         """Clean up the subprocess."""
-        self.proc.terminate()
-        try:
-            self.proc.wait(timeout=0.5)
-        except TimeoutExpired:
-            self.proc.kill()
+        kill_proc_with_children(self.proc.pid)
+        # self.proc.terminate()
+        # try:
+        #     self.proc.wait(timeout=0.5)
+        # except TimeoutExpired:
+        #     self.proc.kill()
 
     def _cleanup_tmp_dir(self) -> None:
         """Clean up the temporary directory."""
