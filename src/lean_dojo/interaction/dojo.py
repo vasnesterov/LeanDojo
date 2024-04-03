@@ -414,16 +414,25 @@ class Dojo:
 
         code_import = self._get_imports()
         code_proof = "\nby\n  lean_dojo_repl\n  sorry\n"
+        
         code_before_theorem = lean_file[: traced_theorem.start]
+        last_nl = code_before_theorem.rfind('\n')
+        code_before_theorem = remove_multiline_comments(
+            code_before_theorem[:last_nl + 1]
+            + "set_option maxHeartbeats 0 in\n"
+            + code_before_theorem[last_nl + 1:]
+        )
+        
         code_thereom = lean_file[traced_theorem.start : proof_start]
         modified_code = (
             code_import
-            + remove_multiline_comments(code_before_theorem)
-            + "set_option maxHeartbeats 0 in\n"
+            + code_before_theorem
             + code_thereom
             + code_proof
             + lean_file[proof_end:]
         )
+
+        # print(modified_code)
 
         return str(modified_code)
 
